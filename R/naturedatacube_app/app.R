@@ -153,7 +153,7 @@ ui <- fluidPage(
 # R Shiny NatureDataCube interface demo version: NAEM
 # ============================================================
 # Created on : 26 Jan 2026
-# Last update : 30 Jan 2026
+# Last update : 9 Feb 2026
 #
 # Description:
 # This script is based on the previous version created by Minke Mulder
@@ -1654,7 +1654,7 @@ server <- function(input, output, session) {
   })
   
   
-
+  
   # Add to overview
   observeEvent(input$add_dataset, {
     poly <- drawn_polygon()
@@ -1850,6 +1850,17 @@ server <- function(input, output, session) {
         tryCatch({
           poly_sf <- ov$polygon_sf[[i]]
           mypolygon <- poly_sf$wkt[1]
+          
+          # build request URL for non-NDVI / non-Weather datasets
+          myurl <- switch(
+            ds,
+            "Agricultural fields" = ndc_url("Fields", params = c(geometry = mypolygon, epsg = "4326", year = year, output_epsg = "4326")),
+            "AHN" = ndc_url("AHN", params = c(geometry = mypolygon, epsg = "4326")),
+            "Soil map" = ndc_url("Soiltypes", params = c(geometry = mypolygon, epsg = "4326", output_epsg = "4326", page_size = "25", page_offset = "0")),
+            "Weather" = NULL,
+            "NDVI" = NULL
+          )
+          
           
           # --- NDVI ---
           # --- NDVI ---
