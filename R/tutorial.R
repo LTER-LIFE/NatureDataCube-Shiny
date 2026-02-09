@@ -56,7 +56,7 @@ library(dplyr)       # data filtering and joining
 
 
 # ============================================================
-# 2. Load the nest data
+# 2. Load the nest data (supplied by Joseph B. Burant, PhD)
 # ============================================================
 # This file contains information on bird nests such as:
 # - lay_date (date eggs were laid)
@@ -278,4 +278,8 @@ ggplot(plot_data, aes(x = lay_date, y = temp)) +
     colour = "Species"
   ) +
   theme_minimal()
+<<<<<<< HEAD
 >>>>>>> 5bb21b5 (Add files via upload)
+=======
+
+>>>>>>> f4f57e4 (Revise tutorial for linking bird nest and weather data)
