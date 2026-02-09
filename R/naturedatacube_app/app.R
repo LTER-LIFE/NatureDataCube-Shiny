@@ -1568,7 +1568,7 @@ server <- function(input, output, session) {
     req(input$selected_dataset)
     switch(
       input$selected_dataset,
-      "Agricultural fields" = HTML("Agricultural fields: Data about crops, yield, and fertilization."),
+      "Agricultural fields" = HTML("Agricultural fields: Data about agricultural fields e.g. crop type."),
       "AHN" = HTML("AHN: Elevation data of the Netherlands. Provided as summary statistics only: minimum, maximum and mean (only AHN4 is currently available)."),
       "Soil map" = HTML("Soil map: Soil map for the selected area."),
       "Weather" = HTML("weather data retrieved from KNMI for selected area"),
