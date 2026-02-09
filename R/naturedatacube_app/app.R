@@ -153,7 +153,7 @@ ui <- fluidPage(
 # R Shiny NatureDataCube interface demo version: NAEM
 # ============================================================
 # Created on : 26 Jan 2026
-# Last update : 9 Feb 2026
+# Last update : 30 Jan 2026
 #
 # Description:
 # This script is based on the previous version created by Minke Mulder
@@ -300,7 +300,7 @@ convert_drawn_to_sf <- function(feat, start_layer_id = 1) {
 ui <- fluidPage(
   
   # title
-  titlePanel("Data Nature Cube"),
+  titlePanel("Nature Data Cube"),
   
   # custom style
   tags$head(
@@ -1570,9 +1570,9 @@ server <- function(input, output, session) {
       input$selected_dataset,
       "Agricultural fields" = HTML("Agricultural fields: Data about crops, yield, and fertilization."),
       "AHN" = HTML("AHN: Elevation data of the Netherlands. Provided as summary statistics only: minimum, maximum and mean (only AHN4 is currently available)."),
-      "Soil map" = HTML("Soil map: Soil types / soil map intersections for the selected area."),
-      "Weather" = HTML("weather from KNMI"),
-      "NDVI" = HTML("Monthly average NDVI")
+      "Soil map" = HTML("Soil map: Soil map for the selected area."),
+      "Weather" = HTML("weather data retrieved from KNMI for selected area"),
+      "NDVI" = HTML("Monthly average NDVI for selected area")
     )
   })
   
