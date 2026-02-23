@@ -232,7 +232,7 @@ source(here::here("R", "retrieval_functions", "weather_functions", "split_date_r
 source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi.R"))
 source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R"))
 
-mytoken <- "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3N1ZWR0byI6ImQubGljaHRlbmJlcmdAbmlvby5rbmF3Lm5sIiwicmVzb3VyY2UiOlsiKiJdLCJpYXQiOjE3NjgyMTM3OTZ9.nEmOwkBTzKBjlsZL8obY-kWvghNS4A1M1Vwv1B94SSU"
+mytoken <- "fill in your own token"
 
 myheaders <- c(
   "Accept" = "application/json;charset=utf-8",
@@ -2033,4 +2033,8 @@ server <- function(input, output, session) {
 # ============================================================
 
 shinyApp(ui, server)
+<<<<<<< HEAD
 >>>>>>> 5303c5d (Add files via upload)
+=======
+
+>>>>>>> cb4ef91 (Update app.R)
