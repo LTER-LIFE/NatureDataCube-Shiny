@@ -99,7 +99,7 @@ safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R
 # --------------------
 # Token / headers (adjust as needed)
 # --------------------
-mytoken <- "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3N1ZWR0byI6ImQubGljaHRlbmJlcmdAbmlvby5rbmFjLm5sIiwicmVzb3VyY2UiOlsiKiJdLCJpYXQiOjE3NjgyMTM3OTZ9.nEmOwkBTzKBjlsLZL8obY-kWvghNS4A1M1Vwv1B94SSU"
+mytoken <- "get your token"
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
 
 # --------------------
