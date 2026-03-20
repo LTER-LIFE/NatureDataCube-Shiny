@@ -1,7 +1,7 @@
-# NatureDataCube Shiny interface (demo version for the NAEM)
+# NatureDataCube Shiny interface (dummy version for the Spring connection)
 
 This repository contains the R code for a Shiny interface of the NatureDataCube.
-The idea of the NatureDataCube is that it offers an accessible way for researchers/ecologists to retrieve relevant data. It is a demo version and it will be used for the NAEM. The Shiny interface was made as an example of what the interface of the NatureDataCube could look like and to gather feedback from researchers.
+The idea of the NatureDataCube is that it offers an accessible way for researchers/ecologists to retrieve relevant data. It is a dummy version and it will be used for the Spring Connection. The Shiny interface was made as an example of what the interface of the NatureDataCube could look like and to gather feedback from researchers.
 
 This interface is built upon the work from Minke Mulder (NIOO-KNAW) in October - December 2025.
 
@@ -28,16 +28,16 @@ The user can open a Shiny interface which lets them select an area (management a
 
 #### Shiny app
 
-Folder: [R/naturedatacube_app](https://github.com/LTER-LIFE/NatureDataCube-Shiny-NAEM/tree/main/R/naturedatacube_app)
+Folder: [R/naturedatacube_app](https://github.com/LTER-LIFE/NatureDataCube-Shiny/tree/main/R/naturedatacube_app)
 
 This folder contains the R code for the Shiny interface. 
 
-Folder: [retrieval_functions](https://github.com/LTER-LIFE/NatureDataCube-Shiny-NAEM/tree/main/R/retrieval_functions) taken from [NatureDataCube-R](https://github.com/LTER-LIFE/NatureDataCube-R)
+Folder: [retrieval_functions](https://github.com/LTER-LIFE/NatureDataCube-Shiny/tree/main/R/retrieval_functions) taken from [NatureDataCube-R](https://github.com/LTER-LIFE/NatureDataCube-R)
 
 This folder contains the retrieval code for constructing the urls.
 
 #### Data
 
-Folder: [data](https://github.com/LTER-LIFE/NatureDataCube-Shiny-NAEM/tree/main/data)
+Folder: [data](https://github.com/LTER-LIFE/NatureDataCube-Shiny/tree/main/data)
 
 This folder contains the data of the available study areas. 
