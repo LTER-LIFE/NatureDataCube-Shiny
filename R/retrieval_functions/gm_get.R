@@ -9,10 +9,8 @@
 #' @returns A request response list.
 #' @export
 
-library(httr)
-
 gm_get <- function(url, option = "NDVI", params,
-                   out_path = paste(getwd(), tmpfile(), sep = "/")) {
+                   out_path = tempfile(fileext = ".tif")) {
 
   # Compose request URL
   if (missing(url) && !missing(option) && !missing(params)) {

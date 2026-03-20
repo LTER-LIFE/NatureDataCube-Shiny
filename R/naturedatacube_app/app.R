@@ -4,8 +4,6 @@
 # Packages
 # --------------------
 load_pkgs <- function(pkgs) {
-  missing_pkgs <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
-  if (length(missing_pkgs) > 0) install.packages(missing_pkgs)
   invisible(lapply(pkgs, library, character.only = TRUE))
 }
 
@@ -99,8 +97,15 @@ safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R
 # --------------------
 # Token / headers (adjust as needed)
 # --------------------
-mytoken <- "get your token"
+mytoken <- Sys.getenv("NDC_TOKEN")
+if (!nzchar(mytoken)) stop("NDC_TOKEN environment variable is not set. Add it to your .env file.")
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
+
+# --------------------
+# Proxy path (e.g. /naturedatacube for https://lter-life-experience.org/naturedatacube)
+# --------------------
+app_base_url <- Sys.getenv("SHINY_APP_BASE_URL")
+if (nzchar(app_base_url)) options(shiny.appBaseUrl = app_base_url)
 
 # --------------------
 # Load fixed polygon layers from a geopackage (adjust path if needed)

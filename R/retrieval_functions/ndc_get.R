@@ -10,8 +10,6 @@
 #' @returns A request response list.
 #' @export
 
-library(httr)
-
 ndc_get <- function(url, option, params, token) {
 
   # Compose request URL

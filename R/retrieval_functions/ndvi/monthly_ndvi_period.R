@@ -1,6 +1,5 @@
 download_avg_ndvi_stack <- function(poly, start_year, start_month, end_year, end_month, epsg = 32631) {
-  library(sf); library(terra); library(lubridate)
-  
+
   start_date <- as.Date(sprintf("%04d-%02d-01", start_year, start_month))
   end_date   <- as.Date(sprintf("%04d-%02d-01", end_year, end_month))
   month_seq  <- seq(start_date, end_date, by = "month")
