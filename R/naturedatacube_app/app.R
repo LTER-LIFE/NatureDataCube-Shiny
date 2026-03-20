@@ -257,7 +257,7 @@ process_uploaded_files <- function(files_df, start_layer_id = 1) {
         paste0(
           "Shapefile upload incomplete for '", shp_name, "'. Missing: ",
           paste(missing, collapse = ", "),
-          ". Please upload .shp, .shx, .dbf (and .prj if available), or zip them together."
+          ". Please upload .shp, .shx, .dbf (and .prj if available)."
         ),
         type = "error",
         duration = 8
@@ -702,7 +702,7 @@ ui <- fluidPage(
       tags$details(class = "ndc-category",
                    tags$summary("Upload your own polygon(s)"),
                    tags$div(style = "margin-top:8px;",
-                            helpText("Supported file formats: .gpkg, .geojson, .shp. For shapefiles, upload all layers: .shp, .shx, .dbf, and preferably .prj."),
+                            helpText("Supported file formats: .gpkg, .shp. For shapefiles, upload all layers: .shp, .shx, .dbf, and preferably .prj."),
                             fileInput(
                               "upload",
                               "Upload polygons",
