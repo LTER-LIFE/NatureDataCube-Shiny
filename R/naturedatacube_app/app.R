@@ -79,31 +79,35 @@ for (ds in all_dataset_names) {
 }
 
 # --------------------
-# Safe source helper for optional retrieval functions
+# Source helper for optional retrieval functions
 # --------------------
-safe_source <- function(path) { tryCatch(source(path), error = function(e) NULL) }
+# AgroDataCube
+source(here::here("R", "retrieval_functions", "ndc_url.R"))
+source(here::here("R", "retrieval_functions", "ndc_get.R"))
 
-# these files must exist in your project; if not, comment out the source lines
-safe_source(here::here("R", "retrieval_functions", "ndc_url.R"))
-safe_source(here::here("R", "retrieval_functions", "ndc_get.R"))
-safe_source(here::here("R", "retrieval_functions", "gm_url.R"))
-safe_source(here::here("R", "retrieval_functions", "gm_get.R"))
-safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_closest_meteostation.R"))
-safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_date.R"))
-safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_period.R"))
-safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_long_period.R"))
-safe_source(here::here("R", "retrieval_functions", "weather_functions", "split_date_range.R"))
-safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi.R"))
-safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R"))
+# GroenMonitor
+source(here::here("R", "retrieval_functions", "gm_url.R"))
+source(here::here("R", "retrieval_functions", "gm_get.R"))
+
+# weather helper functions
+source(here::here("R", "retrieval_functions", "weather_functions", "get_closest_meteostation.R"))
+source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_date.R"))
+source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_period.R"))
+source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_long_period.R"))
+source(here::here("R", "retrieval_functions", "weather_functions", "split_date_range.R"))
+
+# NDVI
+source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi.R"))
+source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R"))
 
 # --------------------
-# Token / headers (adjust as needed)
+# Token
 # --------------------
 mytoken <- "get your token"
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
 
 # --------------------
-# Load fixed polygon layers from a geopackage (adjust path if needed)
+# Load fixed polygon layers from a geopackage 
 # --------------------
 gpkg <- here::here("data", "study_sites.gpkg")
 layers <- tryCatch(sf::st_layers(gpkg)$name, error = function(e) NULL)
@@ -116,7 +120,7 @@ if (!is.null(layers)) {
   )
 }
 
-# handle missing/optional layers gracefully
+# handle missing/optional layers 
 nutnet <- if (!is.null(all_layers) && "nutnet_poly" %in% names(all_layers)) all_layers[["nutnet_poly"]] else NULL
 nestboxes <- if (!is.null(all_layers)) {
   nm <- names(all_layers)
@@ -217,7 +221,7 @@ convert_geojson_feature_to_sf <- function(feat) {
 }
 
 # --------------------
-# Upload helpers (reading various formats)
+# Upload helpers (reading different formats)
 # --------------------
 read_polygons_from_path <- function(path, layer = NULL) {
   sf_obj <- tryCatch({
@@ -304,7 +308,7 @@ process_uploaded_files <- function(files_df, start_layer_id = 1) {
 }
 
 # --------------------
-# Safe color assignment for uploaded layers
+# Safe color for uploaded layers
 # --------------------
 assign_uploaded_colors <- function(up_sf, drawn_features_val = NULL, fixed_polys_val = NULL) {
   if (is.null(up_sf) || nrow(up_sf) == 0) return(up_sf)
@@ -615,7 +619,7 @@ ui <- fluidPage(
                    )
       ),
       
-      # Upload box (moved above the map)
+      # Upload box 
       tags$details(class = "ndc-category",
                    tags$summary("Upload your own polygon(s)"),
                    tags$div(style = "margin-top:8px;",
@@ -836,7 +840,7 @@ ui <- fluidPage(
 # Server
 # --------------------
 server <- function(input, output, session) {
-  # disable Statistics tabs by default (we target tabs with value "Statistics")
+  # disable Statistics tabs by default (target tabs with value "Statistics")
   shinyjs::disable(selector = "a[data-value='Statistics']")
   
   # persistent storage
@@ -992,7 +996,7 @@ server <- function(input, output, session) {
   
   # --------------------
   # helper to clear polygon groups and reactive stores when switching input type.
-  # `except` is a character vector of: "fixed", "uploaded", "drawn" (groups to keep).
+  # `except` is a vector of: "fixed", "uploaded", "drawn" (groups to keep).
   # --------------------
   clear_map_polygons <- function(except = character(0)) {
     groups_all <- c("fixed", "uploaded", "drawn", "highlight_fixed", "highlight_uploaded", "highlight_drawn")
@@ -1915,7 +1919,7 @@ server <- function(input, output, session) {
     NULL
   }, ignoreNULL = FALSE)
   
-  # add_dataset and other parts largely untouched — but we need to read values from the inputs now rendered in the active tab
+
   observeEvent(input$add_dataset, {
     sel <- selected_polygons()
     if (is.null(sel) || nrow(sel) == 0) {
