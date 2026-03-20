@@ -79,35 +79,31 @@ for (ds in all_dataset_names) {
 }
 
 # --------------------
-# Source helper for optional retrieval functions
+# Safe source helper for optional retrieval functions
 # --------------------
-# AgroDataCube
-source(here::here("R", "retrieval_functions", "ndc_url.R"))
-source(here::here("R", "retrieval_functions", "ndc_get.R"))
+safe_source <- function(path) { tryCatch(source(path), error = function(e) NULL) }
 
-# GroenMonitor
-source(here::here("R", "retrieval_functions", "gm_url.R"))
-source(here::here("R", "retrieval_functions", "gm_get.R"))
-
-# weather helper functions
-source(here::here("R", "retrieval_functions", "weather_functions", "get_closest_meteostation.R"))
-source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_date.R"))
-source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_period.R"))
-source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_long_period.R"))
-source(here::here("R", "retrieval_functions", "weather_functions", "split_date_range.R"))
-
-# NDVI
-source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi.R"))
-source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R"))
+# these files must exist in your project; if not, comment out the source lines
+safe_source(here::here("R", "retrieval_functions", "ndc_url.R"))
+safe_source(here::here("R", "retrieval_functions", "ndc_get.R"))
+safe_source(here::here("R", "retrieval_functions", "gm_url.R"))
+safe_source(here::here("R", "retrieval_functions", "gm_get.R"))
+safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_closest_meteostation.R"))
+safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_date.R"))
+safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_period.R"))
+safe_source(here::here("R", "retrieval_functions", "weather_functions", "get_meteo_for_long_period.R"))
+safe_source(here::here("R", "retrieval_functions", "weather_functions", "split_date_range.R"))
+safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi.R"))
+safe_source(here::here("R","retrieval_functions", "ndvi", "monthly_ndvi_period.R"))
 
 # --------------------
-# Token
+# Token / headers (adjust as needed)
 # --------------------
 mytoken <- "get your token"
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
 
 # --------------------
-# Load fixed polygon layers from a geopackage 
+# Load fixed polygon layers from a geopackage (adjust path if needed)
 # --------------------
 gpkg <- here::here("data", "study_sites.gpkg")
 layers <- tryCatch(sf::st_layers(gpkg)$name, error = function(e) NULL)
@@ -120,7 +116,7 @@ if (!is.null(layers)) {
   )
 }
 
-# handle missing/optional layers 
+# handle missing/optional layers gracefully
 nutnet <- if (!is.null(all_layers) && "nutnet_poly" %in% names(all_layers)) all_layers[["nutnet_poly"]] else NULL
 nestboxes <- if (!is.null(all_layers)) {
   nm <- names(all_layers)
@@ -221,7 +217,7 @@ convert_geojson_feature_to_sf <- function(feat) {
 }
 
 # --------------------
-# Upload helpers (reading different formats)
+# Upload helpers (reading various formats)
 # --------------------
 read_polygons_from_path <- function(path, layer = NULL) {
   sf_obj <- tryCatch({
@@ -236,19 +232,70 @@ read_polygons_from_path <- function(path, layer = NULL) {
 }
 
 process_uploaded_files <- function(files_df, start_layer_id = 1) {
-  if (is.null(files_df) || nrow(files_df) == 0) return(list(imported = NULL, pending_gpkg = NULL))
+  if (is.null(files_df) || nrow(files_df) == 0) {
+    return(list(imported = NULL, pending_gpkg = NULL))
+  }
   
   imported_list <- list()
   pending_gpkg <- list()
   
+  # helper for shapefile bundles
+  read_uploaded_shapefile_bundle <- function(files_df, idx) {
+    shp_name <- files_df$name[idx]
+    base <- tools::file_path_sans_ext(basename(shp_name))
+    
+    # find all uploaded files with the same basename
+    same_base <- tools::file_path_sans_ext(basename(files_df$name)) == base
+    bundle <- files_df[same_base, , drop = FALSE]
+    exts <- tolower(tools::file_ext(bundle$name))
+    
+    required <- c("shp", "shx", "dbf")
+    missing <- setdiff(required, exts)
+    
+    if (length(missing) > 0) {
+      showNotification(
+        paste0(
+          "Shapefile upload incomplete for '", shp_name, "'. Missing: ",
+          paste(missing, collapse = ", "),
+          ". Please upload .shp, .shx, .dbf (and .prj if available), or zip them together."
+        ),
+        type = "error",
+        duration = 8
+      )
+      return(NULL)
+    }
+    
+    tmp <- tempfile("shp_bundle_")
+    dir.create(tmp)
+    
+    for (j in seq_len(nrow(bundle))) {
+      file.copy(bundle$datapath[j], file.path(tmp, basename(bundle$name[j])), overwrite = TRUE)
+    }
+    
+    shp_path <- file.path(tmp, paste0(base, ".shp"))
+    
+    sf_obj <- tryCatch(sf::st_read(shp_path, quiet = TRUE), error = function(e) NULL)
+    if (is.null(sf_obj)) return(NULL)
+    
+    poly_only <- sf_obj[sf::st_is(sf_obj, c("POLYGON", "MULTIPOLYGON")), , drop = FALSE]
+    if (nrow(poly_only) == 0) return(NULL)
+    
+    if (is.na(sf::st_crs(poly_only))) sf::st_crs(poly_only) <- 4326
+    poly_only <- sf::st_transform(poly_only, 4326)
+    poly_only
+  }
+  
   for (i in seq_len(nrow(files_df))) {
     f <- files_df[i, ]
-    fname <- f$name; datapath <- f$datapath
+    fname <- f$name
+    datapath <- f$datapath
     ext <- tolower(tools::file_ext(fname))
     
     if (ext == "zip") {
-      tmp <- tempfile("unzip_"); dir.create(tmp)
+      tmp <- tempfile("unzip_")
+      dir.create(tmp)
       utils::unzip(datapath, exdir = tmp)
+      
       gpkg_files    <- list.files(tmp, pattern = "\\.gpkg$", full.names = TRUE, ignore.case = TRUE)
       shp_files     <- list.files(tmp, pattern = "\\.shp$",  full.names = TRUE, ignore.case = TRUE)
       geojson_files <- list.files(tmp, pattern = "\\.(geojson|json)$", full.names = TRUE, ignore.case = TRUE)
@@ -258,48 +305,80 @@ process_uploaded_files <- function(files_df, start_layer_id = 1) {
         for (g in gpkg_files) {
           lyr_info <- tryCatch(sf::st_layers(g), error = function(e) NULL)
           if (!is.null(lyr_info) && length(lyr_info$name) > 1) {
-            pending_gpkg[[length(pending_gpkg) + 1]] <- list(name = paste0(fname, " -> ", basename(g)), datapath = g, layers = lyr_info$name, original_name = fname)
+            pending_gpkg[[length(pending_gpkg) + 1]] <- list(
+              name = paste0(fname, " -> ", basename(g)),
+              datapath = g,
+              layers = lyr_info$name,
+              original_name = fname
+            )
           } else {
             sf_obj <- read_polygons_from_path(g)
-            if (!is.null(sf_obj)) { sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj }
+            if (!is.null(sf_obj)) {
+              sf_obj$source_name <- fname
+              imported_list[[length(imported_list) + 1]] <- sf_obj
+            }
           }
         }
+        
       } else if (length(shp_files) > 0) {
-        sf_obj <- tryCatch(sf::st_read(shp_files[1], quiet = TRUE), error = function(e) NULL)
-        sf_obj <- if (!is.null(sf_obj)) sf_obj[sf::st_is(sf_obj, c("POLYGON", "MULTIPOLYGON")), , drop = FALSE] else NULL
-        if (!is.null(sf_obj) && nrow(sf_obj) > 0) {
-          sf_obj <- sf::st_transform(sf_obj, 4326); sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj
+        sf_obj <- read_polygons_from_path(shp_files[1])
+        if (!is.null(sf_obj)) {
+          sf_obj$source_name <- fname
+          imported_list[[length(imported_list) + 1]] <- sf_obj
         }
+        
       } else if (length(geojson_files) > 0) {
         sf_obj <- read_polygons_from_path(geojson_files[1])
-        if (!is.null(sf_obj)) { sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj }
+        if (!is.null(sf_obj)) {
+          sf_obj$source_name <- fname
+          imported_list[[length(imported_list) + 1]] <- sf_obj
+        }
+        
       } else if (length(kml_files) > 0) {
         lyr_info <- tryCatch(sf::st_layers(kml_files[1]), error = function(e) NULL)
         if (!is.null(lyr_info) && length(lyr_info$name) > 0) {
           sf_obj <- tryCatch(sf::st_read(kml_files[1], layer = lyr_info$name[1], quiet = TRUE), error = function(e) NULL)
           sf_obj <- if (!is.null(sf_obj)) sf_obj[sf::st_is(sf_obj, c("POLYGON", "MULTIPOLYGON")), , drop = FALSE] else NULL
           if (!is.null(sf_obj) && nrow(sf_obj) > 0) {
-            sf_obj <- sf::st_transform(sf_obj, 4326); sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj
+            sf_obj <- sf::st_transform(sf_obj, 4326)
+            sf_obj$source_name <- fname
+            imported_list[[length(imported_list) + 1]] <- sf_obj
           }
         }
       }
       
-    } else if (ext %in% c("gpkg")) {
+    } else if (ext == "gpkg") {
       lyr_info <- tryCatch(sf::st_layers(datapath), error = function(e) NULL)
       if (!is.null(lyr_info) && length(lyr_info$name) > 1) {
-        pending_gpkg[[length(pending_gpkg) + 1]] <- list(name = fname, datapath = datapath, layers = lyr_info$name, original_name = fname)
+        pending_gpkg[[length(pending_gpkg) + 1]] <- list(
+          name = fname,
+          datapath = datapath,
+          layers = lyr_info$name,
+          original_name = fname
+        )
       } else {
         sf_obj <- read_polygons_from_path(datapath)
-        if (!is.null(sf_obj)) { sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj }
+        if (!is.null(sf_obj)) {
+          sf_obj$source_name <- fname
+          imported_list[[length(imported_list) + 1]] <- sf_obj
+        }
       }
       
-    } else if (ext %in% c("geojson", "json", "kml", "shp")) {
+    } else if (ext == "shp") {
+      sf_obj <- read_uploaded_shapefile_bundle(files_df, i)
+      if (!is.null(sf_obj)) {
+        sf_obj$source_name <- fname
+        imported_list[[length(imported_list) + 1]] <- sf_obj
+      }
+      
+    } else if (ext %in% c("geojson", "json", "kml")) {
       sf_obj <- read_polygons_from_path(datapath)
-      if (!is.null(sf_obj)) { sf_obj$source_name <- fname; imported_list[[length(imported_list) + 1]] <- sf_obj }
-    } else {
-      # unsupported - skip
+      if (!is.null(sf_obj)) {
+        sf_obj$source_name <- fname
+        imported_list[[length(imported_list) + 1]] <- sf_obj
+      }
     }
-  } # end files loop
+  }
   
   imported_sf <- NULL
   if (length(imported_list) > 0) imported_sf <- dplyr::bind_rows(imported_list)
@@ -308,7 +387,7 @@ process_uploaded_files <- function(files_df, start_layer_id = 1) {
 }
 
 # --------------------
-# Safe color for uploaded layers
+# Safe color assignment for uploaded layers
 # --------------------
 assign_uploaded_colors <- function(up_sf, drawn_features_val = NULL, fixed_polys_val = NULL) {
   if (is.null(up_sf) || nrow(up_sf) == 0) return(up_sf)
@@ -619,16 +698,21 @@ ui <- fluidPage(
                    )
       ),
       
-      # Upload box 
+      # Upload box (moved above the map)
       tags$details(class = "ndc-category",
                    tags$summary("Upload your own polygon(s)"),
                    tags$div(style = "margin-top:8px;",
-                            helpText("Supported file formats: .gpkg, .geojson, .kml, .shp"),
+                            helpText("Supported file formats: .gpkg, .geojson, .shp. For shapefiles, upload all layers: .shp, .shx, .dbf, and preferably .prj."),
                             fileInput(
                               "upload",
-                              label = "Upload polygon file (single or multiple):",
-                              multiple = TRUE,
-                              accept = c('.zip', '.gpkg', '.geojson', '.json', '.kml', '.shp')
+                              "Upload polygons",
+                              multiple = TRUE,                    # allow selecting several files at once
+                              accept = c(
+                                ".gpkg",                           # GeoPackage
+                                ".shp", ".shx", ".dbf", ".prj",   # shapefile components
+                                ".zip",                            # zipped shapefiles
+                                ".geojson", ".json", ".kml"        # optional other formats
+                              )
                             ),
                             uiOutput("upload_panel"),
                             tags$div(style = "margin-top:6px;")
@@ -840,7 +924,7 @@ ui <- fluidPage(
 # Server
 # --------------------
 server <- function(input, output, session) {
-  # disable Statistics tabs by default (target tabs with value "Statistics")
+  # disable Statistics tabs by default (we target tabs with value "Statistics")
   shinyjs::disable(selector = "a[data-value='Statistics']")
   
   # persistent storage
@@ -996,7 +1080,7 @@ server <- function(input, output, session) {
   
   # --------------------
   # helper to clear polygon groups and reactive stores when switching input type.
-  # `except` is a vector of: "fixed", "uploaded", "drawn" (groups to keep).
+  # `except` is a character vector of: "fixed", "uploaded", "drawn" (groups to keep).
   # --------------------
   clear_map_polygons <- function(except = character(0)) {
     groups_all <- c("fixed", "uploaded", "drawn", "highlight_fixed", "highlight_uploaded", "highlight_drawn")
@@ -1919,7 +2003,7 @@ server <- function(input, output, session) {
     NULL
   }, ignoreNULL = FALSE)
   
-
+  # add_dataset and other parts largely untouched — but we need to read values from the inputs now rendered in the active tab
   observeEvent(input$add_dataset, {
     sel <- selected_polygons()
     if (is.null(sel) || nrow(sel) == 0) {
