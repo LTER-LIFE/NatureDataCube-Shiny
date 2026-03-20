@@ -8,7 +8,7 @@ This interface is built upon the work from Minke Mulder (NIOO-KNAW) in October -
 ### Opening the Shiny app
 To use the Shiny app and continue working with the retrieved data in R, the app must be launched in a specific way so that the output is stored in an R object.
 
-Steps: 
+Steps:
 
 - Navigate to the Shiny app [directory](https://github.com/LTER-LIFE/NatureDataCube-Shiny/tree/main/R/naturedatacube_app)
 - Open `app.R` in RStudio (or another R environment).
@@ -16,11 +16,34 @@ Steps:
 - Set your working directory to the root folder of the repository: `setwd("path/to/NatureDataCube-Shiny"`)
 - Launch the Shiny app from the R console: `data_nc <- runApp("R/naturedatacube_app/app.R"`)
 
-Launching the app in this way ensures that the output generated through the Shiny interface is returned and stored in the R variable data_nc. This allows you to continue working with the retrieved data in R after closing the app. To retrieve data from the Nature Data Cube, an API token is required.  Make sure your token is available in your R session before requesting data. 
+Launching the app in this way ensures that the output generated through the Shiny interface is returned and stored in the R variable data_nc. This allows you to continue working with the retrieved data in R after closing the app. To retrieve data from the Nature Data Cube, an API token is required.  Make sure your token is available in your R session before requesting data.
 
 ### Generate an API token
 
 To generate your free personal API token to retrieve data you can go to [Register API tokens](https://agrodatacube.wur.nl/api/register.jsp).
+
+### Running with Docker or Podman
+
+The app can also be run as a container, which handles all package dependencies automatically.
+
+**Setup:**
+
+Copy `.env.example` to `.env` and fill in your API token:
+```
+NDC_TOKEN=your_token_here
+SHINY_APP_BASE_URL=/naturedatacube
+```
+
+**Run:**
+```bash
+# Docker
+docker compose up --build
+
+# Podman
+podman compose up --build
+```
+
+The app will be available at `http://localhost:3838/naturedatacube`.
 
 ### Description
 

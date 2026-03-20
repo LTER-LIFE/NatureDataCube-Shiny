@@ -1,8 +1,5 @@
 download_avg_ndvi_month <- function(poly, year, month, epsg = 32631) {
-  
-  library(sf)
-  library(terra)
-  
+
   # ---- build month date range ----
   start_date <- as.Date(sprintf("%04d-%02d-01", year, month))
   end_date   <- seq(start_date, length = 2, by = "month")[2] - 1
