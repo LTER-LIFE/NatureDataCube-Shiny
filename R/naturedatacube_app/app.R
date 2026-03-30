@@ -68,8 +68,8 @@ safe_source(here::here("R", "retrieval_functions", "nitrogen_functions.R"))
 # --------------------
 # Token / headers
 # --------------------
-mytoken <- "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3N1ZWR0byI6ImQubGljaHRlbmJlcmdAbmlvby5rbmF3Lm5sIiwicmVzb3VyY2UiOlsiKiJdLCJpYXQiOjE3NjgyMTM3OTZ9.nEmOwkBTzKBjlsZL8obY-kWvghNS4A1M1Vwv1B94SSU"
-token_ndc <- "b32ec2c6-5094-4c39-bddd-9f7a2125ca54"
+mytoken <- ".."
+token_ndc <- "..."
 
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
 
