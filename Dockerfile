@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 RUN R -e "install.packages(c( \
     'shiny', 'leaflet', 'sf', 'dplyr', 'purrr', \
     'stringr', 'httr', 'geojsonsf', 'jsonlite', 'zip', 'here', 'terra', \
-    'lubridate', 'tools', 'tibble', 'shinyjs', 'remotes' \
+    'lubridate', 'tools', 'tibble', 'shinyjs', 'rstac', 'remotes' \
 ), repos='https://packagemanager.posit.co/cran/__linux__/noble/latest')" && \
     R -e "remotes::install_github('bhaskarvk/leaflet.extras')"
 
