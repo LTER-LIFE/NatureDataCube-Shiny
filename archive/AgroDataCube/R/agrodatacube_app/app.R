@@ -17,7 +17,7 @@ library(zip)
 
 # AgroDataCube API key ---------------------------------------------------------
 
-api_key <- "" # Your AgroDataCube API here to retrieve data, request here: https://agrodatacube.wur.nl/api/register.jsp
+api_key <- "a27fe285-a1b7-449c-92cf-07e6b75bb6cb" # Your AgroDataCube API here to retrieve data, request here: https://agrodatacube.wur.nl/api/register.jsp
 
 # Temporary "data" to test the app ---------------------------------------------
 

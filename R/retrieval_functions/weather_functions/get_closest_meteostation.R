@@ -48,16 +48,10 @@ get_closest_meteostation <- function(polygon_wkt,
   closest_idx <- which.min(dists)
   
   closest_station_sf <- stations_sf[closest_idx, , drop = FALSE]
-  closest_id <- (closest_station_sf$meteostationid %||% closest_station_sf$stationid %||% closest_station_sf$station_id)
-  # The %||% is not base R; to be safe:
-  if (is.null(closest_id)) {
-    # try several possible names
-    possible_names <- c("meteostationid", "meteostation_id", "stationid", "station_id", "id")
-    found <- NULL
-    for (nm in possible_names) {
-      if (nm %in% names(closest_station_sf)) { found <- closest_station_sf[[nm]]; break }
-    }
-    closest_id <- found
+  possible_names <- c("meteostationid", "meteostation_id", "stationid", "station_id", "id")
+  closest_id <- NULL
+  for (nm in possible_names) {
+    if (nm %in% names(closest_station_sf)) { closest_id <- closest_station_sf[[nm]]; break }
   }
   
   list(

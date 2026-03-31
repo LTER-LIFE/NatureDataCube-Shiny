@@ -1,7 +1,6 @@
 download_avg_ndvi_month <- function(poly, year, month, epsg = 32631) {
-  library(sf)
-  library(terra)
-  
+
+  # ---- build month date range ----
   start_date <- as.Date(sprintf("%04d-%02d-01", year, month))
   end_date   <- seq(start_date, length = 2, by = "month")[2] - 1
   
@@ -10,7 +9,7 @@ download_avg_ndvi_month <- function(poly, year, month, epsg = 32631) {
     format(start_date, "%B %Y"),
     " (", start_date, " to ", end_date, ")"
   )
-  
+
   poly_utm <- st_transform(poly, epsg)
   bb <- st_bbox(poly_utm)
   
@@ -18,19 +17,19 @@ download_avg_ndvi_month <- function(poly, year, month, epsg = 32631) {
   xmax <- bb["xmax"]
   ymin <- bb["ymin"]
   ymax <- bb["ymax"]
-  
+
   wcs_base <- "https://data.groenmonitor.nl/geoserver/wcs?"
   format_param <- "image/tiff"
   
   files <- character(0)
   tmpdir <- file.path(tempdir(), paste0("ndvi_month_", as.integer(Sys.time())))
   dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
-  
+
   on.exit({
     unlink(files, force = TRUE)
     unlink(tmpdir, recursive = TRUE, force = TRUE)
   }, add = TRUE)
-  
+
   dates <- seq(start_date, end_date, by = "day")
   dates_str <- format(dates, "%Y%m%d")
   
@@ -60,18 +59,18 @@ download_avg_ndvi_month <- function(poly, year, month, epsg = 32631) {
       message("Skipping ", dstr, " (not available)")
     }
   }
-  
+
   if (length(files) == 0) {
     message("No NDVI data available for the selected month")
     return(NULL)
   }
   
   message("Downloaded ", length(files), " NDVI layer(s) for the month")
-  
+
   r_stack <- rast(files)
   r_mean  <- app(r_stack, mean, na.rm = TRUE)
   r_mean[is.nan(r_mean)] <- NA
-  
+
   vals <- values(r_mean)
   if (all(is.na(vals))) {
     message("All raster cells are empty (no NDVI to display)")
