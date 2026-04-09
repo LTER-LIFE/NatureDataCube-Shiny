@@ -5,8 +5,6 @@
 # Packages
 # --------------------
 load_pkgs <- function(pkgs) {
-  missing_pkgs <- pkgs[!vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1))]
-  if (length(missing_pkgs) > 0) install.packages(missing_pkgs)
   invisible(lapply(pkgs, library, character.only = TRUE))
 }
 
@@ -68,10 +66,18 @@ safe_source(here::here("R", "retrieval_functions", "nitrogen_functions.R"))
 # --------------------
 # Token / headers
 # --------------------
-mytoken <- ".."
-token_ndc <- "..."
-
+mytoken <- Sys.getenv("NDC_TOKEN")
+if (!nzchar(mytoken)) stop("NDC_TOKEN environment variable is not set. Add it to your .env file.")
 myheaders <- c("Accept" = "application/json;charset=utf-8", "token" = mytoken)
+
+agro_token <- Sys.getenv("AGRO_DATA_TOKEN")
+if (!nzchar(agro_token)) stop("AGRO_DATA_TOKEN environment variable is not set. Add it to your .env file.")
+
+# --------------------
+# Proxy path (e.g. /naturedatacube for https://lter-life-experience.org/naturedatacube)
+# --------------------
+app_base_url <- Sys.getenv("SHINY_APP_BASE_URL")
+if (nzchar(app_base_url)) options(shiny.appBaseUrl = app_base_url)
 
 # --------------------
 # Load fixed polygon layers
@@ -538,7 +544,7 @@ ui <- fluidPage(
         tags$details(
           class = "ndc-category",
           tags$summary("Biosphere"),
-          
+
           tags$div(
             class = "dataset-row",
             tags$a(
@@ -550,7 +556,7 @@ ui <- fluidPage(
             ),
             actionButton("info_ds_NDVI", "i", class = "btn-info-circle")
           ),
-          
+
           tags$div(
             class = "dataset-row",
             tags$span(
@@ -573,7 +579,7 @@ ui <- fluidPage(
                        actionButton("info_ds_Ground_water_table", "i", class = "btn-info-circle")
                      )
         ),
-        
+
         tags$details(class = "ndc-category",
                      tags$summary("Geosphere"),
                      tags$div(class = "dataset-row", tags$a(id = "ndc-ds-Soil_map", class = "ndc-ds", href = "#", onclick = HTML("document.querySelectorAll('.ndc-ds:not(.fixed-item)').forEach(e=>e.classList.remove('selected')); this.classList.add('selected'); Shiny.setInputValue('selected_dataset', 'Soil map', {priority: 'event'}); return false;"), "Soil Map"), actionButton("info_ds_Soil_map", "i", class = "btn-info-circle")),
@@ -1611,9 +1617,9 @@ server <- function(input, output, session) {
 
   write_sf_safe <- function(obj, outfile, output_kind = c("statistics", "spatial")) {
     output_kind <- match.arg(output_kind)
-    
+
     if (is.null(obj)) return(FALSE)
-    
+
     if (output_kind == "statistics") {
       df <- if (inherits(obj, "sf")) {
         sf::st_drop_geometry(obj)
@@ -1626,35 +1632,35 @@ server <- function(input, output, session) {
       } else {
         tryCatch(as.data.frame(obj), error = function(e) NULL)
       }
-      
+
       if (is.null(df) || nrow(df) == 0) return(FALSE)
       utils::write.csv(df, outfile, row.names = FALSE)
       return(TRUE)
     }
-    
+
     if (inherits(obj, "sf")) {
       sf::st_write(obj, outfile, delete_dsn = TRUE, quiet = TRUE)
       return(TRUE)
     }
-    
+
     if (inherits(obj, "SpatRaster")) {
       terra::writeRaster(obj, outfile, overwrite = TRUE)
       return(TRUE)
     }
-    
+
     if (inherits(obj, "SpatVector")) {
       terra::writeVector(obj, outfile, overwrite = TRUE)
       return(TRUE)
     }
-    
+
     FALSE
   }
 
   write_sf_safe <- function(obj, outfile) {
     if (is.null(obj)) return(FALSE)
-    
+
     ext <- tolower(tools::file_ext(outfile))
-    
+
     if (ext == "csv") {
       df <- if (inherits(obj, "sf")) {
         sf::st_drop_geometry(obj)
@@ -1667,26 +1673,26 @@ server <- function(input, output, session) {
       } else {
         tryCatch(as.data.frame(obj), error = function(e) NULL)
       }
-      
+
       if (is.null(df) || nrow(df) == 0) return(FALSE)
       utils::write.csv(df, outfile, row.names = FALSE)
       return(TRUE)
     }
-    
+
     if (ext == "gpkg") {
       if (inherits(obj, "sf")) {
         sf::st_write(obj, outfile, delete_dsn = TRUE, quiet = TRUE)
         return(TRUE)
       }
-      
+
       if (inherits(obj, "SpatVector")) {
         terra::writeVector(obj, outfile, overwrite = TRUE)
         return(TRUE)
       }
-      
+
       return(FALSE)
     }
-    
+
     if (ext %in% c("tif", "tiff")) {
       if (inherits(obj, "SpatRaster")) {
         terra::writeRaster(obj, outfile, overwrite = TRUE)
@@ -1694,14 +1700,14 @@ server <- function(input, output, session) {
       }
       return(FALSE)
     }
-    
+
     FALSE
   }
-  
+
   retrieve_and_save <- function(zipfile = NULL, save_files = TRUE, workdir = NULL) {
     ov <- overview()
     req(nrow(ov) > 0)
-    
+
     if (save_files) {
       if (is.null(workdir)) {
         workdir <- file.path(tempdir(), paste0("ndc_export_", format(Sys.time(), "%Y%m%d_%H%M%S")))
@@ -1711,12 +1717,12 @@ server <- function(input, output, session) {
     } else {
       workdir <- NULL
     }
-    
+
     download_msgs(character(0))
     local_msgs <- character(0)
     results <- list()
     manifest_rows <- list()
-    
+
     add_manifest_row <- function(dataset, view, polygon, date_label, file_type, file_path, abs_path, status, note = "", reference = NA_character_, license = NA_character_) {
       manifest_rows[[length(manifest_rows) + 1]] <<- tibble::tibble(
         dataset = dataset,
@@ -1732,15 +1738,15 @@ server <- function(input, output, session) {
         license = license
       )
     }
-    
+
     format_date_label <- function(year, date_from, date_to) {
       if (!is.na(year)) return(as.character(year))
-      
+
       if (!is.na(date_from) && !is.na(date_to)) {
         if (date_from == date_to) return(format(date_from, "%Y-%m-%d"))
         return(paste0(format(date_from, "%Y-%m-%d"), " - ", format(date_to, "%Y-%m-%d")))
       }
-      
+
       if (!is.na(date_from)) return(format(date_from, "%Y-%m-%d"))
       if (!is.na(date_to)) return(format(date_to, "%Y-%m-%d"))
       ""
@@ -1754,22 +1760,22 @@ server <- function(input, output, session) {
         mypolygon <- ov$wkt[i]
         polygon_label <- ov$polygon[i]
         date_label <- format_date_label(ov$year[i], ov$date_from[i], ov$date_to[i])
-        
+
         is_stats <- tolower(as.character(view_i)) == "statistics"
         sf_ext <- if (is_stats) "csv" else "gpkg"
-        
+
         outfile_base <- safe_filename(paste0(ds, "_", view_i, "_", i))
         outfile <- NULL
         file_type <- NA_character_
         rel_path <- NA_character_
-        
+
         tryCatch({
           if (ds == "Agricultural fields") {
             myurl <- ndc_url("Fields", params = c(geometry = mypolygon, epsg = "4326", year = ov$year[i], output_epsg = "4326"))
             myres <- content(VERB("GET", url = myurl, add_headers(myheaders)))
             myres_sf <- geojsonsf::geojson_sf(jsonlite::toJSON(myres, auto_unbox = TRUE))
             results[[paste0(ds, "_", i)]] <- myres_sf
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".", sf_ext))
               ok <- write_sf_safe(myres_sf, outfile)
@@ -1781,13 +1787,13 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: ", ds))
             }
-            
+
           } else if (ds == "AHN") {
             myurl <- ndc_url("AHN", params = c(geometry = mypolygon, epsg = "4326"))
             myres <- content(VERB("GET", url = myurl, add_headers(myheaders)))
             myres_sf <- geojsonsf::geojson_sf(jsonlite::toJSON(myres, auto_unbox = TRUE))
             results[[paste0(ds, "_", i)]] <- myres_sf
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".", sf_ext))
               ok <- write_sf_safe(myres_sf, outfile)
@@ -1799,13 +1805,13 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: ", ds))
             }
-            
+
           } else if (ds == "Soil map") {
             myurl <- ndc_url("Soiltypes", params = c(geometry = mypolygon, epsg = "4326", output_epsg = "4326", page_size = "25", page_offset = "0"))
             myres <- content(VERB("GET", url = myurl, add_headers(myheaders)))
             myres_sf <- geojsonsf::geojson_sf(jsonlite::toJSON(myres, auto_unbox = TRUE))
             results[[paste0(ds, "_", i)]] <- myres_sf
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".", sf_ext))
               ok <- write_sf_safe(myres_sf, outfile)
@@ -1817,28 +1823,28 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: ", ds))
             }
-            
+
           } else if (ds == "Weather") {
             cen_res <- get_closest_meteostation(mypolygon, token = mytoken)
             closest_id <- cen_res$closest_id
-            
+
             if (is.null(closest_id)) {
               local_msgs <- c(local_msgs, "Failed: Weather - no nearby station found")
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "failed")
               incProgress(1 / nrow(ov))
               next
             }
-            
+
             df <- ov$date_from[i]
             dt <- ov$date_to[i]
-            
+
             if (is.na(df) || is.na(dt)) {
               local_msgs <- c(local_msgs, "Failed: Weather - missing date range")
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "failed")
               incProgress(1 / nrow(ov))
               next
             }
-            
+
             meteo_sf <- if (df == dt) {
               get_meteo_for_date(closest_id, df, mytoken)
             } else {
@@ -1851,16 +1857,16 @@ server <- function(input, output, session) {
                 sleep_sec = 0.5
               )
             }
-            
+
             if (is.null(meteo_sf) || nrow(meteo_sf) == 0) {
               local_msgs <- c(local_msgs, "Failed: Weather - no data returned")
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "failed")
               incProgress(1 / nrow(ov))
               next
             }
-            
+
             results[[paste0(ds, "_", i)]] <- meteo_sf
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".", sf_ext))
               ok <- write_sf_safe(meteo_sf, outfile)
@@ -1872,30 +1878,30 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, sf_ext, NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: ", ds))
             }
-            
+
           } else if (ds == "Nitrogen") {
             nit_year <- ov$year[i]
-            
+
             nit_res <- get_nitrogen_raster(
               aoi = poly_sf,
               year = nit_year,
               layers = nitrogen_layer_choices,
-              token = token_ndc,
+              token = agro_token,
               out_dir = tempdir(),
               overwrite = TRUE,
               limit = 100,
               file_prefix = tempfile()
             )
-            
+
             if (is.null(nit_res) || is.null(nit_res$stack) || terra::nlyr(nit_res$stack) == 0) {
               local_msgs <- c(local_msgs, paste0("Failed: Nitrogen - no raster returned for year ", nit_year))
               add_manifest_row(ds, view_i, polygon_label, date_label, "tif", NA_character_, NA_character_, "failed")
               incProgress(1 / nrow(ov))
               next
             }
-            
+
             results[[paste0(ds, "_", i)]] <- nit_res$stack
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".tif"))
               ok <- write_sf_safe(nit_res$stack, outfile)
@@ -1907,7 +1913,7 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, "tif", NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: Nitrogen raster for ", nit_year))
             }
-            
+
           } else if (ds == "NDVI") {
             if (input$ndvi_mode == "single") {
               year <- as.integer(input$ndvi_year)
@@ -1929,11 +1935,11 @@ server <- function(input, output, session) {
                   local_msgs <- c(local_msgs, paste0("Retrieved: NDVI ", year, "-", sprintf("%02d", month)))
                 }
               }
-              
+
             } else {
               start_date <- ov$date_from[i]
               end_date <- ov$date_to[i]
-              
+
               if (is.na(start_date) || is.na(end_date)) {
                 local_msgs <- c(local_msgs, paste0("Failed: NDVI - invalid date range for row ", i))
                 add_manifest_row(ds, view_i, polygon_label, date_label, "tif", NA_character_, NA_character_, "failed")
@@ -1942,7 +1948,7 @@ server <- function(input, output, session) {
                 start_month <- as.integer(format(start_date, "%m"))
                 end_year <- as.integer(format(end_date, "%Y"))
                 end_month <- as.integer(format(end_date, "%m"))
-                
+
                 r_stack <- tryCatch({
                   download_avg_ndvi_stack(
                     poly = poly_sf,
@@ -1952,12 +1958,12 @@ server <- function(input, output, session) {
                     end_month = end_month
                   )
                 }, error = function(e) NULL)
-                
+
                 if (!is.null(r_stack) && terra::nlyr(r_stack) > 0) {
                   layer_dates <- seq(from = start_date, to = end_date, by = "month")
                   names(r_stack) <- paste0("NDVI_", format(layer_dates, "%Y%m"))
                   results[[paste0("NDVI_", i)]] <- r_stack
-                  
+
                   if (save_files) {
                     outfile <- file.path(workdir, paste0("NDVI_", format(start_date, "%Y%m"), "_to_", format(end_date, "%Y%m"), ".tif"))
                     ok <- write_sf_safe(r_stack, outfile)
@@ -1978,26 +1984,26 @@ server <- function(input, output, session) {
           } else if (ds == "Land Use") {
             lu_year <- ov$year[i]
             if (is.na(lu_year)) lu_year <- as.integer(landuse_default_year)
-            
+
             lu_res <- get_landuse_raster(
               aoi = poly_sf,
               year = lu_year,
-              token = token_ndc,
+              token = agro_token,
               out_dir = tempdir(),
               overwrite = TRUE,
               limit = 100,
               file_prefix = tempfile()
             )
-            
+
             if (is.null(lu_res) || is.null(lu_res$stack) || terra::nlyr(lu_res$stack) == 0) {
               local_msgs <- c(local_msgs, paste0("Failed: Land Use - no raster returned for year ", lu_year))
               add_manifest_row(ds, view_i, polygon_label, date_label, "tif", NA_character_, NA_character_, "failed")
               incProgress(1 / nrow(ov))
               next
             }
-            
+
             results[[paste0("Land Use_", i)]] <- lu_res$stack
-            
+
             if (save_files) {
               outfile <- file.path(workdir, paste0(outfile_base, ".tif"))
               ok <- write_sf_safe(lu_res$stack, outfile)
@@ -2007,31 +2013,31 @@ server <- function(input, output, session) {
               add_manifest_row(ds, view_i, polygon_label, date_label, "tif", NA_character_, NA_character_, "ok")
               local_msgs <- c(local_msgs, paste0("Retrieved: Land Use raster for year ", lu_year))
             }
-            
+
           } else {
             local_msgs <- c(local_msgs, paste0("Skipped: ", ds, " is not wired to a retrieval endpoint yet."))
             add_manifest_row(ds, view_i, polygon_label, date_label, NA_character_, NA_character_, NA_character_, "skipped")
           }
-          
+
         }, error = function(e) {
           local_msgs <<- c(local_msgs, paste0("Failed: ", ds, " - ", e$message))
           add_manifest_row(ds, view_i, polygon_label, date_label, NA_character_, NA_character_, NA_character_, "failed", note = e$message)
         })
-        
+
         incProgress(1 / nrow(ov))
       }
     })
     
     manifest_df <- if (length(manifest_rows) > 0) dplyr::bind_rows(manifest_rows) else tibble::tibble()
-    
+
     if (save_files) {
       utils::write.csv(manifest_df, file.path(workdir, "download_summary.csv"), row.names = FALSE)
-      
+
       if (!is.null(zipfile)) {
         oldwd <- getwd()
         on.exit(setwd(oldwd), add = TRUE)
         setwd(workdir)
-        
+
         files_to_zip <- list.files(".", recursive = TRUE, full.names = FALSE, no.. = TRUE)
         if (length(files_to_zip) > 0) {
           zip::zipr(zipfile, files = files_to_zip)
@@ -2041,21 +2047,21 @@ server <- function(input, output, session) {
         }
       }
     }
-    
+
     download_msgs(c(download_msgs(), local_msgs))
-    
+
     out <- list(
       datasets = results,
       overview = ov,
       messages = download_msgs(),
       summary = manifest_df
     )
-    
+
     if (save_files) {
       out$out_dir <- workdir
       out$zipfile <- zipfile
     }
-    
+
     out
   }
 
