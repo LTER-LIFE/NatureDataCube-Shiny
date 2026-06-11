@@ -1,0 +1,5 @@
+.env
+.Rhistory
+.RData
+.Rproj.user
+.idea/
